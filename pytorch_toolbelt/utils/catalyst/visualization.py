@@ -451,7 +451,7 @@ def draw_semantic_segmentation_predictions(
         Can be string ("gray", "rgb", "brg") or function `convert(np.ndarray)->nd.ndarray`.
     :return: List of images
     """
-    assert mode in {"overlay", "side-by-side"}
+    assert mode in {"overlay", "side-by-side", "overlay-true-pred"}
 
     images = []
     num_samples = len(input[image_key])
@@ -493,6 +493,28 @@ def draw_semantic_segmentation_predictions(
                 pred_mask[logits == class_index, :] = class_color
 
             overlay = np.hstack((image, true_mask, pred_mask))
+
+        elif mode == "overlay-true-pred":
+            overlay_true = image.copy()
+            for class_index, class_color in class_colors.items():
+                overlay_true[target == class_index, :] = class_color
+            overlay_true = cv2.addWeighted(image,
+                                           0.5,
+                                           overlay_true,
+                                           0.5,
+                                           0,
+                                           dtype=cv2.CV_8U)
+
+            overlay_pred = image.copy()
+            for class_index, class_color in class_colors.items():
+                overlay_pred[logits == class_index, :] = class_color
+            overlay_pred = cv2.addWeighted(image,
+                                           0.5,
+                                           overlay_pred,
+                                           0.5,
+                                           0,
+                                           dtype=cv2.CV_8U)
+            overlay = np.hstack((image, overlay_true, overlay_pred))
         else:
             raise ValueError(mode)
 
