@@ -1,5 +1,5 @@
 import warnings
-from typing import Callable, Optional, List, Union, Dict, Iterable
+from typing import Callable, Optional, List, Union, Dict, Iterable, Tuple
 
 import cv2
 import matplotlib.pyplot as plt
@@ -24,10 +24,14 @@ __all__ = [
 ]
 
 
-def get_tensorboard_logger(runner: IRunner, tensorboard_callback_name: str = "_tensorboard") -> SummaryWriter:
-    tb_callback: TensorboardLogger = runner.callbacks[tensorboard_callback_name]
+def get_tensorboard_logger(
+        runner: IRunner,
+        tensorboard_callback_name: str = "_tensorboard") -> SummaryWriter:
+    tb_callback: TensorboardLogger = runner.callbacks[
+        tensorboard_callback_name]
     if runner.loader_name not in tb_callback.loggers:
-        raise RuntimeError(f"Cannot find Tensorboard logger for loader {runner.loader_name}")
+        raise RuntimeError(
+            f"Cannot find Tensorboard logger for loader {runner.loader_name}")
     return tb_callback.loggers[runner.loader_name]
 
 
@@ -35,7 +39,6 @@ class ShowPolarBatchesCallback(Callback):
     """
     Visualize best and worst batch based in metric in Tensorboard
     """
-
     def __init__(
         self,
         visualize_batch: Callable,
@@ -79,7 +82,8 @@ class ShowPolarBatchesCallback(Callback):
 
     def to_cpu(self, data):
         if isinstance(data, dict):
-            return dict((key, self.to_cpu(value)) for (key, value) in data.items())
+            return dict(
+                (key, self.to_cpu(value)) for (key, value) in data.items())
         if isinstance(data, torch.Tensor):
             return data.detach().cpu()
         if isinstance(data, (list, tuple)):
@@ -98,7 +102,9 @@ class ShowPolarBatchesCallback(Callback):
     def on_batch_end(self, runner: IRunner):
         value = runner.batch_metrics.get(self.target_metric, None)
         if value is None:
-            warnings.warn(f"Metric value for {self.target_metric} is not available in runner.metrics.batch_values")
+            warnings.warn(
+                f"Metric value for {self.target_metric} is not available in runner.metrics.batch_values"
+            )
             return
 
         if self.best_score is None or self.is_better(value, self.best_score):
@@ -115,17 +121,22 @@ class ShowPolarBatchesCallback(Callback):
         logger = get_tensorboard_logger(runner)
 
         if self.best_score is not None:
-            best_samples = self.visualize_batch(self.best_input, self.best_output)
-            self._log_samples(best_samples, "best", logger, runner.global_batch_step)
+            best_samples = self.visualize_batch(self.best_input,
+                                                self.best_output)
+            self._log_samples(best_samples, "best", logger,
+                              runner.global_batch_step)
 
         if self.worst_score is not None:
-            worst_samples = self.visualize_batch(self.worst_input, self.worst_output)
-            self._log_samples(worst_samples, "worst", logger, runner.global_batch_step)
+            worst_samples = self.visualize_batch(self.worst_input,
+                                                 self.worst_output)
+            self._log_samples(worst_samples, "worst", logger,
+                              runner.global_batch_step)
 
     def _log_samples(self, samples, name, logger, step):
         if "tensorboard" in self.targets:
             for i, image in enumerate(samples):
-                logger.add_image(f"{self.target_metric}/{name}/{i}", image_to_tensor(image), step)
+                logger.add_image(f"{self.target_metric}/{name}/{i}",
+                                 image_to_tensor(image), step)
 
         if "matplotlib" in self.targets:
             for i, image in enumerate(samples):
@@ -138,13 +149,13 @@ class ShowPolarBatchesCallback(Callback):
 
 class ShowEmbeddingsCallback(Callback):
     def __init__(
-        self,
-        embedding_key,
-        input_key,
-        targets_key,
-        prefix="embedding",
-        mean=(0.485, 0.456, 0.406),
-        std=(0.229, 0.224, 0.225),
+            self,
+            embedding_key,
+            input_key,
+            targets_key,
+            prefix="embedding",
+            mean=(0.485, 0.456, 0.406),
+            std=(0.229, 0.224, 0.225),
     ):
         super().__init__(CallbackOrder.Logging)
         self.prefix = prefix
@@ -192,17 +203,16 @@ class UMAPCallback(Callback):
     This callback relies on umap-learn package which must be installed beforehand:
     https://github.com/lmcinnes/umap
     """
-
     def __init__(
-        self,
-        input_key: str,
-        features_key: str,
-        output_key: str,
-        output_activation: Callable,
-        prefix: str = "umap",
-        fit_params: Dict = None,
-        plot_params: Dict = None,
-        loaders: Iterable[str] = ("valid"),
+            self,
+            input_key: str,
+            features_key: str,
+            output_key: str,
+            output_activation: Callable,
+            prefix: str = "umap",
+            fit_params: Dict = None,
+            plot_params: Dict = None,
+            loaders: Iterable[str] = ("valid"),
     ):
         """
 
@@ -270,13 +280,17 @@ class UMAPCallback(Callback):
     def _plot_embedings(self, logger, epoch, embeddings, targets, outputs):
         from umap import plot
 
-        fig_gt = plot.points(embeddings, labels=targets, **self._plot_params).figure
+        fig_gt = plot.points(embeddings, labels=targets,
+                             **self._plot_params).figure
         fig_gt = render_figure_to_tensor(fig_gt)
         logger.add_image(f"{self.prefix}/gt/epoch", fig_gt, global_step=epoch)
 
-        fig_pred = plot.points(embeddings, labels=outputs, **self._plot_params).figure
+        fig_pred = plot.points(embeddings, labels=outputs,
+                               **self._plot_params).figure
         fig_pred = render_figure_to_tensor(fig_pred)
-        logger.add_image(f"{self.prefix}/pred/epoch", fig_pred, global_step=epoch)
+        logger.add_image(f"{self.prefix}/pred/epoch",
+                         fig_pred,
+                         global_step=epoch)
 
     def on_loader_start(self, runner: IRunner):
         """Loader start hook.
@@ -294,7 +308,8 @@ class UMAPCallback(Callback):
         if runner.is_valid_loader:
             self._add_to_stats(
                 runner.output[self.features_key].detach(),
-                self.output_activation(runner.output[self.output_key].detach()).flatten(),
+                self.output_activation(
+                    runner.output[self.output_key].detach()).flatten(),
                 runner.input[self.input_key].detach().flatten(),
             )
 
@@ -307,9 +322,11 @@ class UMAPCallback(Callback):
             embeddings, targets, outputs = self._compute_embedings()
 
             tb_logger = get_tensorboard_logger(runner)
-            self._plot_embedings(
-                logger=tb_logger, epoch=runner.global_epoch, embeddings=embeddings, targets=targets, outputs=outputs
-            )
+            self._plot_embedings(logger=tb_logger,
+                                 epoch=runner.global_epoch,
+                                 embeddings=embeddings,
+                                 targets=targets,
+                                 outputs=outputs)
 
 
 def draw_binary_segmentation_predictions(
@@ -356,7 +373,8 @@ def draw_binary_segmentation_predictions(
     if max_images is not None:
         num_samples = min(num_samples, max_images)
 
-    assert output[outputs_key].size(1) == 1, "Mask must be single-channel tensor of shape [Nx1xHxW]"
+    assert output[outputs_key].size(
+        1) == 1, "Mask must be single-channel tensor of shape [Nx1xHxW]"
 
     for i in range(num_samples):
         image = rgb_image_from_tensor(input[image_key][i], mean, std)
@@ -380,15 +398,17 @@ def draw_binary_segmentation_predictions(
         overlay[true_mask & pred_mask] = np.array(
             [0, 250, 0], dtype=overlay.dtype
         )  # Correct predictions (Hits) painted with green
-        overlay[true_mask & ~pred_mask] = np.array([250, 0, 0], dtype=overlay.dtype)  # Misses painted with red
+        overlay[true_mask & ~pred_mask] = np.array(
+            [250, 0, 0], dtype=overlay.dtype)  # Misses painted with red
         overlay[~true_mask & pred_mask] = np.array(
-            [250, 250, 0], dtype=overlay.dtype
-        )  # False alarm painted with yellow
+            [250, 250, 0],
+            dtype=overlay.dtype)  # False alarm painted with yellow
         overlay = cv2.addWeighted(image, 0.5, overlay, 0.5, 0, dtype=cv2.CV_8U)
 
         if image_id_key is not None and image_id_key in input:
             image_id = input[image_id_key][i]
-            cv2.putText(overlay, str(image_id), (10, 15), cv2.FONT_HERSHEY_PLAIN, 1, (250, 250, 250))
+            cv2.putText(overlay, str(image_id), (10, 15),
+                        cv2.FONT_HERSHEY_PLAIN, 1, (250, 250, 250))
 
         images.append(overlay)
     return images
@@ -397,7 +417,7 @@ def draw_binary_segmentation_predictions(
 def draw_semantic_segmentation_predictions(
     input: dict,
     output: dict,
-    class_colors: List,
+    class_colors: Dict[int, Tuple],
     mode="overlay",
     image_key="features",
     image_id_key="image_id",
@@ -455,17 +475,21 @@ def draw_semantic_segmentation_predictions(
 
         if mode == "overlay":
             overlay = image.copy()
-            for class_index, class_color in enumerate(class_colors):
+            for class_index, class_color in class_colors.items():
                 overlay[logits == class_index, :] = class_color
-
-            overlay = cv2.addWeighted(image, 0.5, overlay, 0.5, 0, dtype=cv2.CV_8U)
+            overlay = cv2.addWeighted(image,
+                                      0.5,
+                                      overlay,
+                                      0.5,
+                                      0,
+                                      dtype=cv2.CV_8U)
         elif mode == "side-by-side":
             true_mask = np.zeros_like(image)
-            for class_index, class_color in enumerate(class_colors):
+            for class_index, class_color in class_colors.items():
                 true_mask[target == class_index, :] = class_color
 
             pred_mask = np.zeros_like(image)
-            for class_index, class_color in enumerate(class_colors):
+            for class_index, class_color in class_colors.items():
                 pred_mask[logits == class_index, :] = class_color
 
             overlay = np.hstack((image, true_mask, pred_mask))
@@ -474,7 +498,8 @@ def draw_semantic_segmentation_predictions(
 
         if image_id_key is not None and image_id_key in input:
             image_id = input[image_id_key][i]
-            cv2.putText(overlay, str(image_id), (10, 15), cv2.FONT_HERSHEY_PLAIN, 1, (250, 250, 250))
+            cv2.putText(overlay, str(image_id), (10, 15),
+                        cv2.FONT_HERSHEY_PLAIN, 1, (250, 250, 250))
 
         images.append(overlay)
 
@@ -547,7 +572,12 @@ def draw_multilabel_segmentation_predictions(
             for class_index, class_color in enumerate(class_colors):
                 overlay[logits[class_index], :] = class_color
 
-            overlay = cv2.addWeighted(image, 0.5, overlay, 0.5, 0, dtype=cv2.CV_8U)
+            overlay = cv2.addWeighted(image,
+                                      0.5,
+                                      overlay,
+                                      0.5,
+                                      0,
+                                      dtype=cv2.CV_8U)
         elif mode == "side-by-side":
             true_mask = image.copy()
             for class_index, class_color in enumerate(class_colors):
@@ -557,15 +587,26 @@ def draw_multilabel_segmentation_predictions(
             for class_index, class_color in enumerate(class_colors):
                 pred_mask[logits[class_index], :] = class_color
 
-            true_mask = cv2.addWeighted(image, 0.5, true_mask, 0.5, 0, dtype=cv2.CV_8U)
-            pred_mask = cv2.addWeighted(image, 0.5, pred_mask, 0.5, 0, dtype=cv2.CV_8U)
+            true_mask = cv2.addWeighted(image,
+                                        0.5,
+                                        true_mask,
+                                        0.5,
+                                        0,
+                                        dtype=cv2.CV_8U)
+            pred_mask = cv2.addWeighted(image,
+                                        0.5,
+                                        pred_mask,
+                                        0.5,
+                                        0,
+                                        dtype=cv2.CV_8U)
             overlay = np.hstack((true_mask, pred_mask))
         else:
             raise ValueError(mode)
 
         if image_id_key is not None and image_id_key in input:
             image_id = input[image_id_key][i]
-            cv2.putText(overlay, str(image_id), (10, 15), cv2.FONT_HERSHEY_PLAIN, 1, (250, 250, 250))
+            cv2.putText(overlay, str(image_id), (10, 15),
+                        cv2.FONT_HERSHEY_PLAIN, 1, (250, 250, 250))
 
         images.append(overlay)
 

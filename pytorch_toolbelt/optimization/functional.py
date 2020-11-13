@@ -1,13 +1,16 @@
 from typing import Optional, Iterator
 from torch import nn
 
-__all__ = ["get_lr_decay_parameters", "get_optimizable_parameters", "freeze_model"]
+__all__ = [
+    "get_lr_decay_parameters", "get_optimizable_parameters", "freeze_model"
+]
 
 
 def get_lr_decay_parameters(parameters, learning_rate: float, groups: dict):
-    custom_lr_parameters = dict(
-        (group_name, {"params": [], "lr": learning_rate * lr_factor}) for (group_name, lr_factor) in groups.items()
-    )
+    custom_lr_parameters = dict((group_name, {
+        "params": [],
+        "lr": learning_rate * lr_factor
+    }) for (group_name, lr_factor) in groups.items())
     custom_lr_parameters["default"] = {"params": [], "lr": learning_rate}
 
     for parameter_name, parameter in parameters:
@@ -34,7 +37,9 @@ def get_optimizable_parameters(model: nn.Module) -> Iterator[nn.Parameter]:
     return filter(lambda x: x.requires_grad, model.parameters())
 
 
-def freeze_model(module: nn.Module, freeze_parameters: Optional[bool] = True, freeze_bn: Optional[bool] = True):
+def freeze_model(module: nn.Module,
+                 freeze_parameters: Optional[bool] = True,
+                 freeze_bn: Optional[bool] = True):
     """
     Change 'requires_grad' value for module and it's child modules and
     optionally freeze batchnorm modules.
