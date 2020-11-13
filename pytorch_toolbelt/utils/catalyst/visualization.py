@@ -514,7 +514,7 @@ def draw_semantic_segmentation_predictions(
                                            0.5,
                                            0,
                                            dtype=cv2.CV_8U)
-            overlay = np.hstack((image, overlay_true, overlay_pred))
+            overlay = np.hstack((overlay_true, overlay_pred))
         else:
             raise ValueError(mode)
 
