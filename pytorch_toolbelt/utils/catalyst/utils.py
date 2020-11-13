@@ -5,9 +5,8 @@ from typing import Dict
 import math
 import torch
 from catalyst import utils
-from catalyst.core.callbacks.checkpoint import BaseCheckpointCallback
+from catalyst.callbacks.checkpoint import BaseCheckpointCallback
 from catalyst.dl import IRunner, Callback, CallbackOrder
-
 
 __all__ = [
     "BestMetricCheckpointCallback",
@@ -28,7 +27,9 @@ def clean_checkpoint(src_fname, dst_fname):
     """
     checkpoint = torch.load(src_fname, map_location="cpu")
 
-    keys = ["criterion_state_dict", "optimizer_state_dict", "scheduler_state_dict"]
+    keys = [
+        "criterion_state_dict", "optimizer_state_dict", "scheduler_state_dict"
+    ]
 
     for key in keys:
         if key in checkpoint:
@@ -54,19 +55,15 @@ def report_checkpoint(checkpoint: Dict):
     ]
     print(
         "Metrics (Train):",
-        [
-            (k.replace("train_", ""), v)
-            for k, v, in checkpoint["epoch_metrics"].items()
-            if k not in skip_fields and str.startswith(k, "train_")
-        ],
+        [(k.replace("train_", ""), v)
+         for k, v, in checkpoint["epoch_metrics"].items()
+         if k not in skip_fields and str.startswith(k, "train_")],
     )
     print(
         "Metrics (Valid):",
-        [
-            (k.replace("valid_", ""), v)
-            for k, v, in checkpoint["epoch_metrics"].items()
-            if k not in skip_fields and str.startswith(k, "valid_")
-        ],
+        [(k.replace("valid_", ""), v)
+         for k, v, in checkpoint["epoch_metrics"].items()
+         if k not in skip_fields and str.startswith(k, "valid_")],
     )
 
 
@@ -83,7 +80,6 @@ class BestMetricCheckpointCallback(BaseCheckpointCallback):
     """
     Checkpoint callback to save model weights based on user-defined metric value.
     """
-
     def __init__(
         self,
         target_metric: str,
@@ -102,7 +98,8 @@ class BestMetricCheckpointCallback(BaseCheckpointCallback):
                 in checkpoint folder. Must ends on ``.json`` or ``.yml``
         """
         if checkpoints_dir is None:
-            checkpoints_dir = "checkpoints_" + sanitize_metric_name(target_metric)
+            checkpoints_dir = "checkpoints_" + sanitize_metric_name(
+                target_metric)
 
         super().__init__(metrics_filename=metrics_filename)
         self.main_metric = target_metric
@@ -118,16 +115,17 @@ class BestMetricCheckpointCallback(BaseCheckpointCallback):
         return result
 
     def get_metric(self, last_valid_metrics) -> Dict:
-        top_best_checkpoints = [
-            (Path(filepath).stem, valid_metric) for (filepath, _, valid_metric) in self.top_best_metrics
-        ]
+        top_best_checkpoints = [(Path(filepath).stem, valid_metric)
+                                for (filepath, _,
+                                     valid_metric) in self.top_best_metrics]
         all_epochs_metrics = [
-            (f"epoch_{order_index}", valid_metric) for (order_index, valid_metric) in enumerate(self.epochs_metrics)
+            (f"epoch_{order_index}", valid_metric)
+            for (order_index, valid_metric) in enumerate(self.epochs_metrics)
         ]
         best_valid_metrics = top_best_checkpoints[0][1]
-        metrics = OrderedDict(
-            [("best", best_valid_metrics)] + [("last", last_valid_metrics)] + top_best_checkpoints + all_epochs_metrics
-        )
+        metrics = OrderedDict([("best", best_valid_metrics)] +
+                              [("last", last_valid_metrics)] +
+                              top_best_checkpoints + all_epochs_metrics)
 
         self.metrics = metrics
         return self.metrics
@@ -139,28 +137,38 @@ class BestMetricCheckpointCallback(BaseCheckpointCallback):
                 if math.isfinite(metric_value):
                     return metric_value
                 else:
-                    key = float("+inf") if self.minimize_metric else float("-inf")
+                    key = float("+inf") if self.minimize_metric else float(
+                        "-inf")
                     return key
 
             return get_key
 
         self.top_best_metrics = sorted(
-            self.top_best_metrics, key=get_proper_sort_key(minimize_metric), reverse=not minimize_metric
-        )
+            self.top_best_metrics,
+            key=get_proper_sort_key(minimize_metric),
+            reverse=not minimize_metric)
         if len(self.top_best_metrics) > self.save_n_best:
             last_item = self.top_best_metrics.pop(-1)
             last_filepath = Path(last_item[0])
-            last_filepaths = last_filepath.parent.glob(last_filepath.name.replace(".pth", "*"))
+            last_filepaths = last_filepath.parent.glob(
+                last_filepath.name.replace(".pth", "*"))
             for filepath in last_filepaths:
                 os.remove(filepath)
 
-    def process_checkpoint(
-        self, logdir: str, checkpoint: Dict, is_best: bool, main_metric: str = "loss", minimize_metric: bool = True
-    ):
+    def process_checkpoint(self,
+                           logdir: str,
+                           checkpoint: Dict,
+                           is_best: bool,
+                           main_metric: str = "loss",
+                           minimize_metric: bool = True):
         suffix = self.get_checkpoint_suffix(checkpoint)
 
         exclude = ["criterion", "optimizer", "scheduler"]
-        checkpoint = {key: value for key, value in checkpoint.items() if all(z not in key for z in exclude)}
+        checkpoint = {
+            key: value
+            for key, value in checkpoint.items()
+            if all(z not in key for z in exclude)
+        }
         filepath = utils.save_checkpoint(
             checkpoint=checkpoint,
             logdir=Path(logdir) / Path(self.checkpoints_dir),
@@ -179,7 +187,8 @@ class BestMetricCheckpointCallback(BaseCheckpointCallback):
         self.save_metric(logdir, metrics)
 
     def on_stage_start(self, state: IRunner):
-        self.best_main_metric_value: float = float("+inf") if self.minimize_metric else float("-inf")
+        self.best_main_metric_value: float = float(
+            "+inf") if self.minimize_metric else float("-inf")
 
     def on_epoch_end(self, state: IRunner):
         if state.stage_name.startswith("infer"):
@@ -202,9 +211,13 @@ class BestMetricCheckpointCallback(BaseCheckpointCallback):
 
         main_metric_value = valid_metrics[self.main_metric]
         if self.minimize_metric:
-            is_best = math.isfinite(main_metric_value) and main_metric_value < self.best_main_metric_value
+            is_best = math.isfinite(
+                main_metric_value
+            ) and main_metric_value < self.best_main_metric_value
         else:
-            is_best = math.isfinite(main_metric_value) and main_metric_value > self.best_main_metric_value
+            is_best = math.isfinite(
+                main_metric_value
+            ) and main_metric_value > self.best_main_metric_value
 
         if is_best:
             self.best_main_metric_value = main_metric_value
@@ -219,16 +232,17 @@ class BestMetricCheckpointCallback(BaseCheckpointCallback):
 
     def on_stage_end(self, state: IRunner):
         print("Top best models:")
-        top_best_metrics_str = "\n".join(
-            [
-                "{filepath}\t{metric:3.4f}".format(filepath=filepath, metric=checkpoint_metric)
-                for filepath, checkpoint_metric, _ in self.top_best_metrics
-            ]
-        )
+        top_best_metrics_str = "\n".join([
+            "{filepath}\t{metric:3.4f}".format(filepath=filepath,
+                                               metric=checkpoint_metric)
+            for filepath, checkpoint_metric, _ in self.top_best_metrics
+        ])
         print(top_best_metrics_str)
 
     def save_metric(self, logdir: str, metrics: Dict) -> None:
-        utils.save_config(metrics, f"{logdir}/{self.checkpoints_dir}/{self.metrics_filename}")
+        utils.save_config(
+            metrics,
+            f"{logdir}/{self.checkpoints_dir}/{self.metrics_filename}")
 
     def on_exception(self, state: IRunner):
         exception = state.exception
@@ -270,7 +284,6 @@ class HyperParametersCallback(Callback):
     Callback that logs hyper-parameters for training session and target metric value.
     Useful for evaluation of several runs in Tensorboard.
     """
-
     def __init__(self, hparam_dict: Dict):
         if "stage" in hparam_dict:
             raise KeyError("Key 'stage' is reserved")
@@ -285,5 +298,6 @@ class HyperParametersCallback(Callback):
         hparam_dict["stage"] = state.stage_name
 
         logger.add_hparams(
-            hparam_dict=self.hparam_dict, metric_dict=state.best_valid_metrics,
+            hparam_dict=self.hparam_dict,
+            metric_dict=state.best_valid_metrics,
         )
