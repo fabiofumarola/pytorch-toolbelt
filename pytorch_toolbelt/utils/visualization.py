@@ -42,17 +42,18 @@ def plot_confusion_matrix(
     misclass = 1 - accuracy
 
     if cmap is None:
-        cmap = plt.cm.Oranges
+        cmap = plt.cm.Blues
 
     f = plt.figure(figsize=figsize)
-    plt.imshow(cm, interpolation="nearest", cmap=cmap)
-    plt.title(title)
-    plt.colorbar()
 
     if normalize:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             cm = cm.astype(np.float32) / cm.sum(axis=1)[:, np.newaxis]
+
+    plt.imshow(cm, interpolation="nearest", cmap=cmap)
+    plt.title(title)
+    plt.colorbar()
 
     tick_marks = np.arange(len(class_names))
     plt.xticks(tick_marks, class_names, rotation=45, ha="right")
@@ -72,7 +73,8 @@ def plot_confusion_matrix(
             )
 
     plt.ylabel("True label")
-    plt.xlabel("Predicted label\nAccuracy={:0.4f}; Misclass={:0.4f}".format(accuracy, misclass))
+    plt.xlabel("Predicted label\nAccuracy={:0.4f}; Misclass={:0.4f}".format(
+        accuracy, misclass))
     plt.tight_layout()
 
     if fname is not None:
@@ -123,7 +125,13 @@ def hstack_autopad(images: List[np.ndarray]) -> np.ndarray:
         pad_bottom = max_height - height
         pad_left = 0
         pad_right = 0
-        img = cv2.copyMakeBorder(img, pad_top, pad_bottom, pad_left, pad_right, cv2.BORDER_CONSTANT, value=0)
+        img = cv2.copyMakeBorder(img,
+                                 pad_top,
+                                 pad_bottom,
+                                 pad_left,
+                                 pad_right,
+                                 cv2.BORDER_CONSTANT,
+                                 value=0)
         (rows, cols) = img.shape[0:2]
         padded_images.append(img)
 
@@ -151,7 +159,13 @@ def vstack_autopad(images: List[np.ndarray]) -> np.ndarray:
         pad_bottom = 0
         pad_left = 0
         pad_right = max_width - width
-        img = cv2.copyMakeBorder(img, pad_top, pad_bottom, pad_left, pad_right, cv2.BORDER_CONSTANT, value=0)
+        img = cv2.copyMakeBorder(img,
+                                 pad_top,
+                                 pad_bottom,
+                                 pad_left,
+                                 pad_right,
+                                 cv2.BORDER_CONSTANT,
+                                 value=0)
         padded_images.append(img)
 
     return np.vstack(padded_images)
